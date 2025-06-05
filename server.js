@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 import connectDB from "./config/db.js"; // Note: Add .js extension for local files
 import cors from "cors";
 import chapterRoutes from "./routes/chapterRoutes.js"; // Add .js extension
-import rateLimiter from "express-rate-limit";
+import rateLimiter from "./middlewares/rateLimiter.js";
 
 // dotenv configuration
 dotenv.config();
@@ -15,8 +15,9 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
-// app.use(rateLimiter);
+app.use(rateLimiter);
 
+// testing api
 app.get("/", (req, res) => {
   res.send("Backend is running");
 });

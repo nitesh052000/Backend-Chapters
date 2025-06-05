@@ -2,29 +2,34 @@ import rateLimit from "express-rate-limit";
 import RedisStore from "rate-limit-redis";
 import { createClient } from "redis";
 
-// Create Redis client (must use legacyMode: true)
-const redisClient = createClient({
-  url: process.env.REDIS_URL,
-  legacyMode: true, // required for compatibility with rate-limit-redis
-});
+let rateLimiter;
 
-await redisClient.connect().catch((err) => {
-  console.error("❌ Redis connection failed:", err.message);
+const redisClient = createClient({
+  url: process.env.REDIS_URL || "redis://localhost:6379",
+  legacyMode: true,
 });
 
 redisClient.on("error", (err) => {
   console.error("❌ Redis error in rate limiter:", err.message);
 });
 
-const rateLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 30, // 30 requests per minute per IP
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: "⚠️ Too many requests from this IP. Please try again later.",
-  store: RedisStore({
-    sendCommand: (...args) => redisClient.sendCommand(args),
-  }),
-});
+async function createRateLimiter() {
+  await redisClient.connect().catch((err) => {
+    console.error("❌ Redis connection failed:", err.message);
+  });
+
+  return rateLimit({
+    windowMs: 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: "⚠️ Too many requests from this IP. Please try again later.",
+    store: new RedisStore({
+      sendCommand: (...args) => redisClient.sendCommand(args),
+    }),
+  });
+}
+
+rateLimiter = await createRateLimiter();
 
 export default rateLimiter;
